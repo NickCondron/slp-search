@@ -56,13 +56,22 @@ fn main() {
     for slp in &cli.replays {
         let path = slp.as_path();
         if !path.is_file() {
-            println!("{} does not exist", path.to_string_lossy());
+            eprintln!("{} does not exist", path.to_string_lossy());
             continue;
         }
 
         let f = fs::File::open(path).unwrap();
         let mut buf = io::BufReader::new(f);
-        let game = peppi::game(&mut buf, None, None).unwrap();
+        let game = peppi::game(&mut buf, None, None);
+        match game {
+            Err(e) => {
+                eprintln!("{}", e);
+                continue;
+            },
+            _ => {},
+        }
+        let game = game.unwrap();
+
         //println!("{:#?}", game);
 
         match match_players(&game, &cli) {
