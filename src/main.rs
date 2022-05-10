@@ -4,6 +4,7 @@ use peppi::model::enums::character::External;
 use peppi::model::enums::stage::Stage;
 use peppi::model::primitives::Port;
 use peppi::model::*;
+use peppi::serde::de;
 use std::{fs, io, path};
 
 #[derive(Parser, Debug)]
@@ -64,7 +65,8 @@ fn main() {
 
         let f = fs::File::open(path).unwrap();
         let mut buf = io::BufReader::new(f);
-        let game = peppi::game(&mut buf, None, None);
+        let skip_frames = Some(de::Opts { skip_frames: true });
+        let game = peppi::game(&mut buf, skip_frames, None);
         match game {
             Err(e) => {
                 eprintln!("{}", e);
