@@ -9,9 +9,10 @@ use std::{fs, io, path};
 #[derive(Parser, Debug)]
 #[clap(author, version, about)]
 struct Cli {
-    // Case insensitive
-    //#[clap(short,long)]
-    //ignorecase: bool,
+    /// Case insensitive
+    #[clap(short,long)]
+    ignorecase: bool,
+
     /// Stage
     #[clap(short, long)]
     stage: Option<String>,
@@ -113,10 +114,10 @@ fn match_players(game: &game::Game, cli: &Cli) -> MatchedPlayers {
     let p1 = &players[0];
     let p2 = &players[1];
 
-    let player_matches1 = match_player(&p1, &cli.pchar, &cli.pname, &cli.pcode);
-    let player_matches2 = match_player(&p2, &cli.pchar, &cli.pname, &cli.pcode);
-    let oppon_matches1 = match_player(&p1, &cli.ochar, &cli.oname, &cli.ocode);
-    let oppon_matches2 = match_player(&p2, &cli.ochar, &cli.oname, &cli.ocode);
+    let player_matches1 = match_player(&p1, cli.ignorecase, &cli.pchar, &cli.pname, &cli.pcode);
+    let player_matches2 = match_player(&p2, cli.ignorecase, &cli.pchar, &cli.pname, &cli.pcode);
+    let oppon_matches1 = match_player(&p1, cli.ignorecase, &cli.ochar, &cli.oname, &cli.ocode);
+    let oppon_matches2 = match_player(&p2, cli.ignorecase, &cli.ochar, &cli.oname, &cli.ocode);
 
     // println!("{}, {}, {}, {}",
     //     player_matches1,
@@ -140,7 +141,7 @@ fn match_players(game: &game::Game, cli: &Cli) -> MatchedPlayers {
 
 fn match_player(
     player: &game::Player,
-    //ignorecase: bool,
+    ignorecase: bool,
     car: &Option<String>,
     name: &Option<String>,
     code: &Option<String>,
@@ -155,12 +156,16 @@ fn match_player(
         (None, None) => true,
         (name, code) => (match name {
             None => true,
-            Some(n) => n == &np.name,
+            Some(n) => ignorecase && equals_ignorecase(n, &np.name) || n == &np.name,
         }) && (match code {
             None => true,
-            Some(c) => c == &np.code,
+            Some(c) => ignorecase && equals_ignorecase(c, &np.code) || c == &np.code,
         })
     })
+}
+
+fn equals_ignorecase(s1: &String, s2: &String) -> bool {
+    s1.to_ascii_uppercase() == s2.to_ascii_uppercase()
 }
 
 fn match_stage(stage: &String, id: &Stage) -> bool {
