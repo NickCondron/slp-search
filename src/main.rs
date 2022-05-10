@@ -1,6 +1,7 @@
 use clap::Parser;
 //use peppi::model::enums::action_state::{Common, State};
 use peppi::model::enums::character::External;
+use peppi::model::enums::stage::Stage;
 use peppi::model::primitives::Port;
 use peppi::model::*;
 use std::{fs, io, path};
@@ -73,6 +74,9 @@ fn main() {
         let game = game.unwrap();
 
         //println!("{:#?}", game);
+        if !match_game(&game, &cli) {
+            continue;
+        }
 
         match match_players(&game, &cli) {
             MatchedPlayers::NoMatch() => {
@@ -88,6 +92,15 @@ fn main() {
     //let state  = action_state::State::from(10,Internal::MARTH);
     //let state: State  = State::Common(Common(10));
     //let state = Common::WAIT;
+}
+
+fn match_game(game: &game::Game, cli: &Cli) -> bool {
+    let stage_id = &game.start.stage;
+
+    match &cli.stage {
+        None => true,
+        Some(stage) => match_stage(&stage, &stage_id),
+    }
 }
 
 fn match_players(game: &game::Game, cli: &Cli) -> MatchedPlayers {
@@ -148,6 +161,16 @@ fn match_player(
             Some(c) => c == &np.code,
         })
     })
+}
+
+fn match_stage(stage: &String, id: &Stage) -> bool {
+    let formatted = stage.replace(" ", "_").to_ascii_uppercase();
+    let formatstr = formatted.as_str();
+    if let Ok(stageid) = Stage::try_from(formatstr) {
+        stageid == *id
+    } else {
+        false
+    }
 }
 
 fn match_character(character: &String, id: &External) -> bool {
