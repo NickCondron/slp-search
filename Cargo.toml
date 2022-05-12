@@ -3,7 +3,7 @@ name = "slp-search"
 authors = ["Nick Condron <ncondron42@gmail.com>"]
 description = "Filter slp replays or search for events"
 repository = "https://github.com/ncondron42/slp-search"
-version = "0.1.0"
+version = "0.2.0"
 license = "MIT"
 edition = "2021"
 

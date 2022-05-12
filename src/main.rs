@@ -1,94 +1,62 @@
+pub mod args;
+pub mod lib;
+
+use lib::MatchedPlayers;
+use args::{Cli, Commands, Filter, SharedArgs};
 use clap::Parser;
-//use peppi::model::enums::action_state::{Common, State};
 use peppi::model::enums::character::External;
 use peppi::model::enums::stage::Stage;
-use peppi::model::primitives::Port;
 use peppi::model::*;
 use peppi::serde::de;
-use std::{fs, io, path};
+use std::{fs, io};
 
-#[derive(Parser, Debug)]
-#[clap(author, version, about)]
-struct Cli {
-    /// Case insensitive
-    #[clap(short,long)]
-    ignorecase: bool,
-
-    /// Stage
-    #[clap(short, long)]
-    stage: Option<String>,
-
-    /// Player character
-    #[clap(long)]
-    pchar: Option<String>,
-
-    /// Player netplay name
-    #[clap(long)]
-    pname: Option<String>,
-
-    /// Player netplay connect code (eg. MANG#0)
-    #[clap(long)]
-    pcode: Option<String>,
-
-    /// Opponent character
-    #[clap(long)]
-    ochar: Option<String>,
-
-    /// Opponent netplay name
-    #[clap(long)]
-    oname: Option<String>,
-
-    /// Opponent netplay connect code (eg. MANG#0)
-    #[clap(long)]
-    ocode: Option<String>,
-
-    /// Replays to search
-    replays: Vec<path::PathBuf>,
-}
-
-enum MatchedPlayers {
-    OneWay(Port, Port),
-    Both(Port, Port),
-    NoMatch(),
-}
-use crate::MatchedPlayers::*;
 
 fn main() {
     let cli = Cli::parse();
 
-    for slp in &cli.replays {
+    for slp in cli.replays() {
         let path = slp.as_path();
         if !path.is_file() {
             eprintln!("{} does not exist", path.to_string_lossy());
             continue;
         }
 
+        // Attempt to parse games without frames
         let f = fs::File::open(path).unwrap();
         let mut buf = io::BufReader::new(f);
         let skip_frames = Some(de::Opts { skip_frames: true });
         let game = peppi::game(&mut buf, skip_frames, None);
-        match game {
-            Err(e) => {
-                eprintln!("{}", e);
-                continue;
-            },
-            _ => {},
+        if let Err(e) = game {
+            eprintln!("{}", e);
+            continue;
         }
         let game = game.unwrap();
 
-        //println!("{:#?}", game);
-        if !match_game(&game, &cli) {
+        let args: &SharedArgs = cli.shared_args();
+        let players = match_players(
+            &game,
+            &args.ignorecase,
+            &args.pchar,
+            &args.pname,
+            &args.pcode,
+            &args.ochar,
+            &args.oname,
+            &args.ocode,
+        );
+        if let MatchedPlayers::NoMatch() = players {
             continue;
         }
 
-        match match_players(&game, &cli) {
-            MatchedPlayers::NoMatch() => {
-                continue;
-            }
-            _ => {
-                println!("{:#?}", path.to_string_lossy());
-            }
-        };
+        match cli.command {
+            Commands::Filter(ref filter_args) => {
+                if do_filter(&game, &filter_args) {
+                    println!("{:#?}", path.to_string_lossy());
+                }
+            },
+            Commands::Search(ref _search_args) => {
+                todo!();
+            },
+        }
     }
 
     //let state  = State::from("ATTACK_11");//Falco.REFLECTOR_AIR_CHANGE_DIRECTION;
@@ -97,29 +65,37 @@ fn main() {
     //let state = Common::WAIT;
 }
 
-fn match_game(game: &game::Game, cli: &Cli) -> bool {
-    let stage_id = &game.start.stage;
-
-    match &cli.stage {
-        None => true,
-        Some(stage) => match_stage(&stage, &stage_id),
+fn do_filter(game: &game::Game, filter_args: &Filter) -> bool {
+    if let Some(stage) = &filter_args.stage {
+        match_stage(&stage, &game.start.stage)
+    } else {
+        true
     }
 }
 
-fn match_players(game: &game::Game, cli: &Cli) -> MatchedPlayers {
+fn match_players(
+    game: &game::Game,
+    ignorecase: &bool,
+    pchar: &Option<String>,
+    pname: &Option<String>,
+    pcode: &Option<String>,
+    ochar: &Option<String>,
+    oname: &Option<String>,
+    ocode: &Option<String>
+) -> MatchedPlayers {
     let players = &game.start.players;
 
     if players.len() != 2 {
-        return NoMatch();
+        return MatchedPlayers::NoMatch();
     }
 
     let p1 = &players[0];
     let p2 = &players[1];
 
-    let player_matches1 = match_player(&p1, cli.ignorecase, &cli.pchar, &cli.pname, &cli.pcode);
-    let player_matches2 = match_player(&p2, cli.ignorecase, &cli.pchar, &cli.pname, &cli.pcode);
-    let oppon_matches1 = match_player(&p1, cli.ignorecase, &cli.ochar, &cli.oname, &cli.ocode);
-    let oppon_matches2 = match_player(&p2, cli.ignorecase, &cli.ochar, &cli.oname, &cli.ocode);
+    let player_matches1 = match_player(p1, ignorecase, pchar, pname, pcode);
+    let player_matches2 = match_player(p2, ignorecase, pchar, pname, pcode);
+    let oppon_matches1 = match_player(p1, ignorecase, ochar, oname, ocode);
+    let oppon_matches2 = match_player(p2, ignorecase, ochar, oname, ocode);
 
     // println!("{}, {}, {}, {}",
     //     player_matches1,
@@ -134,16 +110,16 @@ fn match_players(game: &game::Game, cli: &Cli) -> MatchedPlayers {
         oppon_matches1,
         oppon_matches2,
     ) {
-        (true, true, true, true) => Both(p1.port, p2.port),
-        (true, _, _, true) => OneWay(p1.port, p2.port),
-        (_, true, true, _) => OneWay(p2.port, p1.port),
-        _ => NoMatch(),
+        (true, true, true, true) => MatchedPlayers::Both(p1.port, p2.port),
+        (true, _, _, true) => MatchedPlayers::OneWay(p1.port, p2.port),
+        (_, true, true, _) => MatchedPlayers::OneWay(p2.port, p1.port),
+        _ => MatchedPlayers::NoMatch(),
     }
 }
 
 fn match_player(
     player: &game::Player,
-    ignorecase: bool,
+    ignorecase: &bool,
     car: &Option<String>,
     name: &Option<String>,
     code: &Option<String>,
@@ -158,10 +134,10 @@ fn match_player(
         (None, None) => true,
         (name, code) => (match name {
             None => true,
-            Some(n) => ignorecase && equals_ignorecase(n, &np.name) || n == &np.name,
+            Some(n) => *ignorecase && equals_ignorecase(n, &np.name) || n == &np.name,
         }) && (match code {
             None => true,
-            Some(c) => ignorecase && equals_ignorecase(c, &np.code) || c == &np.code,
+            Some(c) => *ignorecase && equals_ignorecase(c, &np.code) || c == &np.code,
         })
     })
 }
