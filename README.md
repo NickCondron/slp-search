@@ -5,10 +5,11 @@ files quickly. Written in Rust using [peppi](https://github.com/hohav/peppi).
 
 ## Usage
 
-`slp-search [OPTIONS] [REPLAYS]...`
+`slp-search filter [OPTIONS] [REPLAYS]...`
+`slp-search search [OPTIONS] [REPLAYS]...`
 
 `slp-search -h` for more info
 
 Specify one or more restrictions and supply one or more replay files. Ex:
 
-`slp-search --pchar fox --pname Clown --ochar peach *.slp`
+`slp-search filter --pchar fox --pname Clown --ochar peach *.slp`
