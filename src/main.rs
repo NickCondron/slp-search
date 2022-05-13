@@ -35,7 +35,7 @@ fn main() {
         let args: &SharedArgs = cli.shared_args();
         let players = match_players(
             &game,
-            &args.ignorecase,
+            args.ignorecase,
             &args.pchar,
             &args.pname,
             &args.pcode,
@@ -75,7 +75,7 @@ fn do_filter(game: &game::Game, filter_args: &Filter) -> bool {
 
 fn match_players(
     game: &game::Game,
-    ignorecase: &bool,
+    ignorecase: bool,
     pchar: &Option<String>,
     pname: &Option<String>,
     pcode: &Option<String>,
@@ -119,7 +119,7 @@ fn match_players(
 
 fn match_player(
     player: &game::Player,
-    ignorecase: &bool,
+    ignorecase: bool,
     car: &Option<String>,
     name: &Option<String>,
     code: &Option<String>,
@@ -134,19 +134,19 @@ fn match_player(
         (None, None) => true,
         (name, code) => (match name {
             None => true,
-            Some(n) => *ignorecase && equals_ignorecase(n, &np.name) || n == &np.name,
+            Some(n) => ignorecase && equals_ignorecase(n, &np.name) || n == &np.name,
         }) && (match code {
             None => true,
-            Some(c) => *ignorecase && equals_ignorecase(c, &np.code) || c == &np.code,
+            Some(c) => ignorecase && equals_ignorecase(c, &np.code) || c == &np.code,
         })
     })
 }
 
-fn equals_ignorecase(s1: &String, s2: &String) -> bool {
+fn equals_ignorecase(s1: &str, s2: &str) -> bool {
     s1.to_ascii_uppercase() == s2.to_ascii_uppercase()
 }
 
-fn match_stage(stage: &String, id: &Stage) -> bool {
+fn match_stage(stage: &str, id: &Stage) -> bool {
     let formatted = stage.replace(" ", "_").to_ascii_uppercase();
     let formatstr = formatted.as_str();
     if let Ok(stageid) = Stage::try_from(formatstr) {
@@ -156,7 +156,7 @@ fn match_stage(stage: &String, id: &Stage) -> bool {
     }
 }
 
-fn match_character(character: &String, id: &External) -> bool {
+fn match_character(character: &str, id: &External) -> bool {
     let formatted = character.replace(" ", "_").to_ascii_uppercase();
     let formatstr = formatted.as_str();
     if let Ok(charid) = External::try_from(formatstr) {

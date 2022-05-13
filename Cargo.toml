@@ -11,4 +11,5 @@ edition = "2021"
 
 [dependencies]
 peppi = "1.0.0-alpha.6"
+#peppi = { path = "../peppi/peppi" }
 clap = { version = "3.1.17", features = ["derive"] }
