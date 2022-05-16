@@ -10,6 +10,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-peppi = "1.0.0-alpha.6"
-#peppi = { path = "../peppi/peppi" }
+#peppi = "1.0.0-alpha.6"
+nom = { version = "7.1.1" }
+peppi = { path = "../peppi/peppi" }
 clap = { version = "3.1.17", features = ["derive"] }
