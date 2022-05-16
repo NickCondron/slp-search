@@ -84,6 +84,5 @@ pub struct SharedArgs {
     pub ignorecase: bool,
 
     /// Replays to search
-    #[clap(global = true)]
     pub replays: Vec<path::PathBuf>,
 }

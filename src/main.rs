@@ -43,7 +43,7 @@ fn main() {
             &args.oname,
             &args.ocode,
         );
-        if let MatchedPlayers::NoMatch() = players {
+        if let MatchedPlayers::NoMatch = players {
             continue;
         }
 
@@ -86,7 +86,7 @@ fn match_players(
     let players = &game.start.players;
 
     if players.len() != 2 {
-        return MatchedPlayers::NoMatch();
+        return MatchedPlayers::NoMatch;
     }
 
     let p1 = &players[0];
@@ -113,7 +113,7 @@ fn match_players(
         (true, true, true, true) => MatchedPlayers::Both(p1.port, p2.port),
         (true, _, _, true) => MatchedPlayers::OneWay(p1.port, p2.port),
         (_, true, true, _) => MatchedPlayers::OneWay(p2.port, p1.port),
-        _ => MatchedPlayers::NoMatch(),
+        _ => MatchedPlayers::NoMatch,
     }
 }
 
