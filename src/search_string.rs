@@ -64,11 +64,11 @@ fn mrange(i: &[u8]) -> MResult<&[u8], MRange> {
     }
 }
 
-fn frame_gap(i: &[u8]) -> MResult<&[u8], Token> {
+fn frame_gap(i: &[u8]) -> MResult<&[u8], FrameGap> {
     map(tuple((tag("fg"), mrange)), |(_, range)| {
-        Token::FrameGap(FrameGap {
+        FrameGap {
             range: range,
-        })
+        }
     })(i)
 }
 
@@ -79,26 +79,34 @@ fn player(i: &[u8]) -> MResult<&[u8], Player> {
     ))(i)
 }
 
-fn action(i: &[u8]) -> MResult<&[u8], Token> {
+fn action(i: &[u8]) -> MResult<&[u8], Action> {
     map(tuple((char('.'), player, complete::u16)), |(_, player, id)| {
-        Token::Action(Action {
+        Action {
             player: player,
             state: State::Common(Common(id)),
-        })
+        }
     })(i)
 }
 
-fn percent(i: &[u8]) -> MResult<&[u8], Token> {
+fn percent(i: &[u8]) -> MResult<&[u8], Percent> {
     map(tuple((char('%'), player, mrange)), |(_, player, range)| {
-        Token::Percent(Percent {
+        Percent {
             player: player,
             range: range,
-        })
+        }
     })(i)
+}
+
+fn token(i: &[u8]) -> MResult<&[u8], Token> {
+    alt((
+        map(frame_gap, |t| Token::FrameGap(t)),
+        map(percent, |t| Token::Percent(t)),
+        map(action, |t| Token::Action(t)),
+    ))(i)
 }
 
 pub fn parse_string(i: &[u8]) -> MResult<&[u8], Vec<Token>> {
-    separated_list1(multispace1, alt((frame_gap, action, percent)))(i)
+    separated_list1(multispace1, token)(i)
 }
 
 #[cfg(test)]
@@ -116,15 +124,13 @@ mod tests {
         let fg2 = FrameGap { range: MRange { start: 0, end: 30 } };
         let fg3 = FrameGap { range: MRange { start: 2, end: 2 } };
 
-        if let Token::FrameGap(r1) = frame_gap(s1).unwrap().1 {
-            assert_eq!(r1, fg1);
-        }
-        if let Token::FrameGap(r2) = frame_gap(s2).unwrap().1 {
-            assert_eq!(r2, fg2);
-        }
-        if let Token::FrameGap(r3) = frame_gap(s3).unwrap().1 {
-            assert_eq!(r3, fg3);
-        }
+        let r1 = frame_gap(s1).unwrap().1;
+        let r2 = frame_gap(s2).unwrap().1;
+        let r3 = frame_gap(s3).unwrap().1;
+
+        assert_eq!(r1, fg1);
+        assert_eq!(r2, fg2);
+        assert_eq!(r3, fg3);
     }
     #[test]
     fn test_percent() {
@@ -136,14 +142,12 @@ mod tests {
         let p2 = Percent { player: Player::Opponent, range: MRange { start: 0, end: 30 } };
         let p3 = Percent { player: Player::Player, range: MRange { start: 2, end: 2 } };
 
-        if let Token::Percent(r1) = percent(s1).unwrap().1 {
-            assert_eq!(r1, p1);
-        }
-        if let Token::Percent(r2) = percent(s2).unwrap().1 {
-            assert_eq!(r2, p2);
-        }
-        if let Token::Percent(r3) = percent(s3).unwrap().1 {
-            assert_eq!(r3, p3);
-        }
+        let r1 = percent(s1).unwrap().1;
+        let r2 = percent(s2).unwrap().1;
+        let r3 = percent(s3).unwrap().1;
+
+        assert_eq!(r1, p1);
+        assert_eq!(r2, p2);
+        assert_eq!(r3, p3);
     }
 }
