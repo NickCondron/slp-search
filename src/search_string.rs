@@ -105,7 +105,7 @@ fn token(i: &[u8]) -> MResult<&[u8], Token> {
     ))(i)
 }
 
-pub fn parse_string(i: &[u8]) -> MResult<&[u8], Vec<Token>> {
+pub fn search_string(i: &[u8]) -> MResult<&[u8], Vec<Token>> {
     separated_list1(multispace1, token)(i)
 }
 
@@ -149,5 +149,11 @@ mod tests {
         assert_eq!(r1, p1);
         assert_eq!(r2, p2);
         assert_eq!(r3, p3);
+    }
+
+    #[test]
+    fn test_token_count() {
+        let s =b".p14   fg=1\n%p50..200";
+        assert_eq!(search_string(s).unwrap().1.len(), 3);
     }
 }
