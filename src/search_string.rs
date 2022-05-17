@@ -1,53 +1,149 @@
-use super::lib::{Player, Token, Action, FrameGap, Percent};
-use nom::IResult;
+use super::lib::{Action, FrameGap, Percent, MRange, Player, Token};
+use nom::error::{ErrorKind, ParseError};
+use nom::Err::Error;
 use nom::branch::alt;
+use nom::bytes::complete::tag;
+use nom::character::complete::{self, char, multispace1};
+use nom::combinator::{map, opt};
 use nom::multi::separated_list1;
 use nom::sequence::tuple;
-use nom::character::complete::{self, multispace1, char};
-use nom::bytes::complete::{tag};
-use nom::combinator::{map, opt};
-use std::ops::Range;
+use nom::IResult;
+use peppi::model::enums::action_state::{Common, State};
 
-fn range_single(i: &[u8]) -> IResult<&[u8], Range<u32>> {
+#[derive(Debug, PartialEq)]
+pub enum SearchParseError<I> {
+    Nom(I, ErrorKind),
+    IllegalRange,
+}
+
+impl<I> ParseError<I> for SearchParseError<I> {
+    fn from_error_kind(input: I, kind: ErrorKind) -> Self {
+        SearchParseError::Nom(input, kind)
+    }
+
+    fn append(_: I, _: ErrorKind, other: Self) -> Self {
+        other
+    }
+}
+
+type MResult<I, O> = IResult<I, O, SearchParseError<I>>;
+
+fn mrange_single(i: &[u8]) -> MResult<&[u8], MRange> {
     let (i, (_, num)) = tuple((char('='), complete::u32))(i)?;
-    Ok((i, Range { start: num, end: num }))
+    Ok((i, MRange {
+            start: num,
+            end: num,
+        }
+    ))
 }
-fn range_multiple(i: &[u8]) -> IResult<&[u8], Range<u32>> {
+
+fn mrange_multiple(i: &[u8]) -> MResult<&[u8], MRange> {
     let (i, (low, _, high)) = tuple((complete::u32, tag(".."), complete::u32))(i)?;
-    Ok((i, Range { start: low, end: high }))
-}
-fn range(i: &[u8]) -> IResult<&[u8], Range<u32>> {
-    alt((range_single, range_multiple))(i)
-}
-
-fn frame_gap(i: &[u8]) -> IResult<&[u8], Token> {
-    let (i, _) = tag("fg")(i)?;
-    let (i, range) = range(i)?;
-    Ok((i, Token::FrameGap(FrameGap { range: range })))
+    Ok((i, MRange {
+            start: low,
+            end: high,
+        }
+    ))
 }
 
-fn player(i: &[u8]) -> IResult<&[u8], Player> {
+fn mrange_capped(i: &[u8]) -> MResult<&[u8], MRange> {
+    let (i, (_, high)) = tuple((tag(".."), complete::u32))(i)?;
+    Ok((i, MRange {
+            start: 0,
+            end: high,
+        }
+    ))
+}
+
+fn mrange(i: &[u8]) -> MResult<&[u8], MRange> {
+    let (i, range) = alt((mrange_single, mrange_multiple, mrange_capped))(i)?;
+    if range.start > range.end {
+        Err(Error(SearchParseError::IllegalRange))
+    } else {
+        Ok((i, range))
+    }
+}
+
+fn frame_gap(i: &[u8]) -> MResult<&[u8], Token> {
+    map(tuple((tag("fg"), mrange)), |(_, range)| {
+        Token::FrameGap(FrameGap {
+            range: range,
+        })
+    })(i)
+}
+
+fn player(i: &[u8]) -> MResult<&[u8], Player> {
     alt((
         map(char('p'), |_| Player::Player),
         map(char('o'), |_| Player::Opponent),
     ))(i)
 }
 
-
-fn action(i: &[u8]) -> IResult<&[u8], Token> {
-    todo!()
+fn action(i: &[u8]) -> MResult<&[u8], Token> {
+    map(tuple((char('.'), player, complete::u16)), |(_, player, id)| {
+        Token::Action(Action {
+            player: player,
+            state: State::Common(Common(id)),
+        })
+    })(i)
 }
 
-fn percent(i: &[u8]) -> IResult<&[u8], Token> {
-    map(tuple((char('%'), player, range)),
-        |(_, player, range)|
-        Token::Percent(Percent { player: player, range: range }))(i)
+fn percent(i: &[u8]) -> MResult<&[u8], Token> {
+    map(tuple((char('%'), player, mrange)), |(_, player, range)| {
+        Token::Percent(Percent {
+            player: player,
+            range: range,
+        })
+    })(i)
 }
 
-pub fn parse_string(search_string: &[u8]) -> IResult<&[u8], Vec<Token>> {
-    separated_list1(multispace1, alt((
-        frame_gap,
-        action,
-        percent,
-    )))(search_string)
+pub fn parse_string(i: &[u8]) -> MResult<&[u8], Vec<Token>> {
+    separated_list1(multispace1, alt((frame_gap, action, percent)))(i)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lib::*;
+
+    #[test]
+    fn test_frame_gap() {
+        let s1 = b"fg3..7";
+        let s2 = b"fg..30";
+        let s3 = b"fg=2";
+
+        let fg1 = FrameGap { range: MRange { start: 3, end: 7 } };
+        let fg2 = FrameGap { range: MRange { start: 0, end: 30 } };
+        let fg3 = FrameGap { range: MRange { start: 2, end: 2 } };
+
+        if let Token::FrameGap(r1) = frame_gap(s1).unwrap().1 {
+            assert_eq!(r1, fg1);
+        }
+        if let Token::FrameGap(r2) = frame_gap(s2).unwrap().1 {
+            assert_eq!(r2, fg2);
+        }
+        if let Token::FrameGap(r3) = frame_gap(s3).unwrap().1 {
+            assert_eq!(r3, fg3);
+        }
+    }
+    #[test]
+    fn test_percent() {
+        let s1 = b"%p3..7";
+        let s2 = b"%o..30";
+        let s3 = b"%p=2";
+
+        let p1 = Percent { player: Player::Player, range: MRange { start: 3, end: 7 } };
+        let p2 = Percent { player: Player::Opponent, range: MRange { start: 0, end: 30 } };
+        let p3 = Percent { player: Player::Player, range: MRange { start: 2, end: 2 } };
+
+        if let Token::Percent(r1) = percent(s1).unwrap().1 {
+            assert_eq!(r1, p1);
+        }
+        if let Token::Percent(r2) = percent(s2).unwrap().1 {
+            assert_eq!(r2, p2);
+        }
+        if let Token::Percent(r3) = percent(s3).unwrap().1 {
+            assert_eq!(r3, p3);
+        }
+    }
 }
