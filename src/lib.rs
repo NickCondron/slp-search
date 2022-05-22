@@ -1,5 +1,4 @@
 use peppi::model::enums::character;
-use peppi::model::enums::action_state::State;
 use peppi::model::primitives::Port;
 
 pub enum MatchedPlayers {
@@ -33,9 +32,16 @@ impl MRange {
     }
 }
 
+pub type AnchorGroup = Vec<FrameAnchor>;
+
+#[derive(Debug)]
+pub struct Query {
+    pub first_anchor: AnchorGroup,
+    pub remaining: Vec<(FrameGap, AnchorGroup)>,
+}
+
 #[derive(Debug,PartialEq,Eq)]
-pub enum Token {
-    FrameGap(FrameGap),
+pub enum FrameAnchor {
     Action(Action),
     Percent(Percent),
 }
@@ -49,7 +55,7 @@ pub struct FrameGap {
 #[derive(Debug,PartialEq,Eq)]
 pub struct Action {
     pub player: Player,
-    pub state: State,
+    pub state_id: u16,
     //pub age: f32,
 }
 

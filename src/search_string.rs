@@ -1,19 +1,20 @@
-use super::lib::{Action, FrameGap, Percent, MRange, Player, Token};
+use super::lib::*;
 use nom::error::{ErrorKind, ParseError};
 use nom::Err::Error;
 use nom::branch::alt;
 use nom::bytes::complete::tag;
-use nom::character::complete::{self, char, multispace1};
-use nom::combinator::{map, opt};
-use nom::multi::separated_list1;
-use nom::sequence::tuple;
+use nom::character::complete::{self, char};
+use nom::combinator::map;
+use nom::multi::{many0, many1};
+use nom::sequence::{tuple, pair};
 use nom::IResult;
-use peppi::model::enums::action_state::{Common, State};
 
 #[derive(Debug, PartialEq)]
 pub enum SearchParseError<I> {
     Nom(I, ErrorKind),
     IllegalRange,
+    AnchorAlreadyExists,
+    NoAnchorsDeclared,
 }
 
 impl<I> ParseError<I> for SearchParseError<I> {
@@ -64,14 +65,6 @@ fn mrange(i: &[u8]) -> MResult<&[u8], MRange> {
     }
 }
 
-fn frame_gap(i: &[u8]) -> MResult<&[u8], FrameGap> {
-    map(tuple((tag("fg"), mrange)), |(_, range)| {
-        FrameGap {
-            range: range,
-        }
-    })(i)
-}
-
 fn player(i: &[u8]) -> MResult<&[u8], Player> {
     alt((
         map(char('p'), |_| Player::Player),
@@ -79,11 +72,19 @@ fn player(i: &[u8]) -> MResult<&[u8], Player> {
     ))(i)
 }
 
+fn frame_gap(i: &[u8]) -> MResult<&[u8], FrameGap> {
+    map(tuple((char('-'), mrange)), |(_, range)| {
+        FrameGap {
+            range: range,
+        }
+    })(i)
+}
+
 fn action(i: &[u8]) -> MResult<&[u8], Action> {
     map(tuple((char('.'), player, complete::u16)), |(_, player, id)| {
         Action {
             player: player,
-            state: State::Common(Common(id)),
+            state_id: id,
         }
     })(i)
 }
@@ -97,16 +98,30 @@ fn percent(i: &[u8]) -> MResult<&[u8], Percent> {
     })(i)
 }
 
-fn token(i: &[u8]) -> MResult<&[u8], Token> {
-    alt((
-        map(frame_gap, |t| Token::FrameGap(t)),
-        map(percent, |t| Token::Percent(t)),
-        map(action, |t| Token::Action(t)),
-    ))(i)
+fn frame_anchor(i: &[u8]) -> MResult<&[u8], FrameAnchor> {
+     alt((
+        map(action, |t| FrameAnchor::Action(t)),
+        map(percent, |t| FrameAnchor::Percent(t)),
+     ))(i)
 }
 
-pub fn search_string(i: &[u8]) -> MResult<&[u8], Vec<Token>> {
-    separated_list1(multispace1, token)(i)
+fn anchor_group(i: &[u8]) -> MResult<&[u8], AnchorGroup> {
+    many1(frame_anchor)(i)
+}
+
+pub fn query(i: &[u8]) -> MResult<&[u8], Query> {
+    map(
+        pair(
+            anchor_group,
+            many0(pair(frame_gap, anchor_group))
+        ),
+        |(first, remaining)| {
+            Query {
+                first_anchor: first,
+                remaining: remaining,
+            }
+        }
+    )(i)
 }
 
 #[cfg(test)]
@@ -116,9 +131,9 @@ mod tests {
 
     #[test]
     fn test_frame_gap() {
-        let s1 = b"fg3..7";
-        let s2 = b"fg..30";
-        let s3 = b"fg=2";
+        let s1 = b"-3..7";
+        let s2 = b"-..30";
+        let s3 = b"-=2";
 
         let fg1 = FrameGap { range: MRange { start: 3, end: 7 } };
         let fg2 = FrameGap { range: MRange { start: 0, end: 30 } };
@@ -132,6 +147,18 @@ mod tests {
         assert_eq!(r2, fg2);
         assert_eq!(r3, fg3);
     }
+
+    #[test]
+    fn test_action() {
+        let s1 = b".p14";
+
+        let a1 = Action { player: Player::Player, state_id: 14 };
+
+        let r1 = action(s1).unwrap().1;
+
+        assert_eq!(r1, a1);
+    }
+
     #[test]
     fn test_percent() {
         let s1 = b"%p3..7";
@@ -152,8 +179,15 @@ mod tests {
     }
 
     #[test]
-    fn test_token_count() {
-        let s =b".p14   fg=1\n%p50..200";
-        assert_eq!(search_string(s).unwrap().1.len(), 3);
+    fn test_query() {
+        let s1 = b"%p3..7";
+        let s2 = b".p14%o..30%p10..300";
+        let s3 = b".p14-=10.o14";
+        let s4 = b".p65%o70..150-..90.p63-..60.o4"; // nair -> upsmash kill
+
+        query(s1).unwrap();
+        query(s2).unwrap();
+        query(s3).unwrap();
+        query(s4).unwrap();
     }
 }
