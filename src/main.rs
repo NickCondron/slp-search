@@ -1,6 +1,7 @@
 pub mod args;
 pub mod lib;
 pub mod search_string;
+pub mod finder;
 
 use lib::MatchedPlayers;
 use args::{Cli, Commands, Filter, SharedArgs};

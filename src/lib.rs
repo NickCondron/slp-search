@@ -8,13 +8,13 @@ pub enum MatchedPlayers {
 }
 
 pub struct Context {
-    pub player_character: character::Internal,
-    pub player_port: Port,
-    pub opponent_character: character::Internal,
-    pub opponent_port: Port,
+    pub p_character: character::Internal,
+    pub p_port: Port,
+    pub o_character: character::Internal,
+    pub o_port: Port,
 }
 
-#[derive(Debug,PartialEq,Eq)]
+#[derive(Debug,PartialEq,Eq,Copy,Clone)]
 pub enum Player {
     Player,
     Opponent,
@@ -27,7 +27,7 @@ pub struct MRange {
 }
 
 impl MRange {
-    fn contains(&self, num: u32) -> bool {
+    pub fn contains(&self, num: u32) -> bool {
         self.start <= num && num <= self.end
     }
 }
@@ -44,6 +44,15 @@ pub struct Query {
 pub enum FrameAnchor {
     Action(Action),
     Percent(Percent),
+}
+
+impl FrameAnchor {
+    pub fn player(&self) -> Player {
+        match self {
+            FrameAnchor::Action(a) => a.player,
+            FrameAnchor::Percent(p) => p.player,
+        }
+    }
 }
 
 #[derive(Debug,PartialEq,Eq)]
@@ -65,8 +74,7 @@ pub struct Percent {
     pub range: MRange,
 }
 
-pub struct MatchResult {
-    pub context: Context,
+pub struct Match {
     pub frame_start: i32,
     pub frame_end: i32,
 }
