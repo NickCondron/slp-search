@@ -9,5 +9,7 @@ edition = "2021"
 
 [dependencies]
 #peppi = "1.0.0-alpha.6"
+lazy_static = { version = "1.4.0" }
+regex = { version = "1", default-features = false, features = ["perf", "std"] }
 peppi = { git = "https://github.com/hohav/peppi", branch="master" }
 clap = { version = "3.1.17", features = ["derive"] }

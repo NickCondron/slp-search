@@ -1,8 +1,10 @@
 pub mod args;
+pub mod regex;
 pub mod lib;
 
 use lib::MatchedPlayers;
 use args::{Cli, Commands, Filter, SharedArgs};
+use crate::regex::*;
 use clap::Parser;
 use peppi::model::enums::character::External;
 use peppi::model::enums::stage::Stage;
