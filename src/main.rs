@@ -2,16 +2,20 @@ pub mod args;
 pub mod regex;
 pub mod lib;
 
+use std::{fs, io};
+use clap::Parser;
+use peppi::model::{
+    game::{ Player, Game },
+    enums::{
+        character::External,
+        stage::Stage,
+    },
+};
+use peppi::serde::de;
+
 use lib::MatchedPlayers;
 use args::{Cli, Commands, Filter, SharedArgs};
 use crate::regex::*;
-use clap::Parser;
-use peppi::model::enums::character::External;
-use peppi::model::enums::stage::Stage;
-use peppi::model::*;
-use peppi::serde::de;
-use std::{fs, io};
-
 
 fn main() {
     let cli = Cli::parse();
@@ -60,23 +64,17 @@ fn main() {
             },
         }
     }
-
-    //let state  = State::from("ATTACK_11");//Falco.REFLECTOR_AIR_CHANGE_DIRECTION;
-    //let state  = action_state::State::from(10,Internal::MARTH);
-    //let state: State  = State::Common(Common(10));
-    //let state = Common::WAIT;
 }
 
-fn do_filter(game: &game::Game, filter_args: &Filter) -> bool {
-    if let Some(stage) = &filter_args.stage {
-        match_stage(&stage, &game.start.stage)
-    } else {
-        true
-    }
+fn do_filter(game: &Game, filter_args: &Filter) -> bool {
+    filter_args.stage.as_ref()
+        .and_then(|s| Stage::try_match(s))
+        .map(|s| s == game.start.stage)
+        .unwrap_or(true)
 }
 
 fn match_players(
-    game: &game::Game,
+    game: &Game,
     ignorecase: bool,
     pchar: &Option<String>,
     pname: &Option<String>,
@@ -99,13 +97,6 @@ fn match_players(
     let oppon_matches1 = match_player(p1, ignorecase, ochar, oname, ocode);
     let oppon_matches2 = match_player(p2, ignorecase, ochar, oname, ocode);
 
-    // println!("{}, {}, {}, {}",
-    //     player_matches1,
-    //     player_matches2,
-    //     oppon_matches1,
-    //     oppon_matches2,
-    // );
-
     match (
         player_matches1,
         player_matches2,
@@ -120,50 +111,26 @@ fn match_players(
 }
 
 fn match_player(
-    player: &game::Player,
+    player: &Player,
     ignorecase: bool,
-    car: &Option<String>,
+    char: &Option<String>,
     name: &Option<String>,
     code: &Option<String>,
 ) -> bool {
     let np = player.netplay.as_ref().expect("No Netplay data found");
 
-    (match car {
-        None => true,
-        Some(c) => match_character(&c, &player.character)
-    }) &&
-    (match (name, code) {
-        (None, None) => true,
-        (name, code) => (match name {
-            None => true,
-            Some(n) => ignorecase && equals_ignorecase(n, &np.name) || n == &np.name,
-        }) && (match code {
-            None => true,
-            Some(c) => ignorecase && equals_ignorecase(c, &np.code) || c == &np.code,
-        })
-    })
+    char.as_ref()
+        .and_then(|c| External::try_match(c))
+        .map(|c| c == player.character)
+        .unwrap_or(true) &&
+    name.as_ref().map(|n| {
+        ignorecase && equals_ignorecase(n, &np.name) || n == &np.name
+    }).unwrap_or(true) &&
+    code.as_ref().map(|c| {
+        ignorecase && equals_ignorecase(c, &np.code) || c == &np.code
+    }).unwrap_or(true)
 }
 
 fn equals_ignorecase(s1: &str, s2: &str) -> bool {
     s1.to_ascii_uppercase() == s2.to_ascii_uppercase()
-}
-
-fn match_stage(stage: &str, id: &Stage) -> bool {
-    let formatted = stage.replace(" ", "_").to_ascii_uppercase();
-    let formatstr = formatted.as_str();
-    if let Ok(stageid) = Stage::try_from(formatstr) {
-        stageid == *id
-    } else {
-        false
-    }
-}
-
-fn match_character(character: &str, id: &External) -> bool {
-    let formatted = character.replace(" ", "_").to_ascii_uppercase();
-    let formatstr = formatted.as_str();
-    if let Ok(charid) = External::try_from(formatstr) {
-        charid == *id
-    } else {
-        false
-    }
 }
