@@ -14,7 +14,7 @@ use std::{fs, io};
 fn main() {
     let cli = Cli::parse();
 
-    for slp in cli.replays() {
+    for slp in &cli.shared_args().replays {
         let path = slp.as_path();
         if !path.is_file() {
             eprintln!("{} does not exist", path.to_string_lossy());

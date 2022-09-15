@@ -9,15 +9,13 @@ use std::path;
     subcommand_required = true,
     arg_required_else_help = true
 )]
+
 pub struct Cli {
     #[clap(subcommand)]
     pub command: Commands,
 }
 
 impl Cli {
-    pub fn replays(&self) -> &Vec<path::PathBuf> {
-        &self.shared_args().replays
-    }
     pub fn shared_args(&self) -> &SharedArgs {
         match self.command {
             Commands::Filter(ref filter_args) => &filter_args.shared_args,
