@@ -356,6 +356,7 @@ checksum = "8e22443d1643a904602595ba1cd8f7d896afe56d26712531c5ff73a15b2fbf64"
 [[package]]
 name = "peppi"
 version = "1.0.0-alpha.6"
+source = "git+https://github.com/hohav/peppi?branch=master#961d95beea86b7d2800ee33f1e0d5f60f186454e"
 dependencies = [
  "arrow2",
  "byteorder",
@@ -372,6 +373,7 @@ dependencies = [
 [[package]]
 name = "peppi-arrow"
 version = "0.2.3"
+source = "git+https://github.com/hohav/peppi?branch=master#961d95beea86b7d2800ee33f1e0d5f60f186454e"
 dependencies = [
  "arrow2",
 ]
@@ -379,6 +381,7 @@ dependencies = [
 [[package]]
 name = "peppi-derive"
 version = "0.2.3"
+source = "git+https://github.com/hohav/peppi?branch=master#961d95beea86b7d2800ee33f1e0d5f60f186454e"
 dependencies = [
  "darling",
  "peppi-arrow",

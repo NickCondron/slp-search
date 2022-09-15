@@ -24,8 +24,8 @@ fn main() {
         // Attempt to parse games without frames
         let f = fs::File::open(path).unwrap();
         let mut buf = io::BufReader::new(f);
-        let skip_frames = Some(de::Opts { skip_frames: true });
-        let game = peppi::game(&mut buf, skip_frames, None);
+        let opts = Some(de::Opts { skip_frames: true, debug_dir: None });
+        let game = peppi::game(&mut buf, opts.as_ref(), None);
         if let Err(e) = game {
             eprintln!("{}", e);
             continue;
