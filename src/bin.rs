@@ -1,6 +1,5 @@
 pub mod args;
 pub mod regex;
-pub mod lib;
 
 use std::{fs, io};
 use clap::Parser;
@@ -13,7 +12,7 @@ use peppi::model::{
 };
 use peppi::serde::de;
 
-use lib::MatchedPlayers;
+use slp_search::MatchedPlayers;
 use args::{Cli, Commands, Filter, SharedArgs};
 use crate::regex::*;
 

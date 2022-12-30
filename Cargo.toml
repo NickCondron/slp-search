@@ -7,6 +7,14 @@ version = "0.2.0"
 license = "MIT"
 edition = "2021"
 
+[lib]
+name = "slp_search"
+path = "src/lib.rs"
+
+[[bin]]
+name = "slp_search"
+path = "src/bin.rs"
+
 [dependencies]
 #peppi = "1.0.0-alpha.6"
 lazy_static = { version = "1.4.0" }

@@ -5,4 +5,3 @@ pub enum MatchedPlayers {
     Both(Port, Port),
     NoMatch,
 }
-
