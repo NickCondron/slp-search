@@ -116,18 +116,22 @@ fn match_player(
     name: &Option<String>,
     code: &Option<String>,
 ) -> bool {
-    let np = player.netplay.as_ref().expect("No Netplay data found");
-
     char.as_ref()
         .and_then(|c| External::try_match(c))
         .map(|c| c == player.character)
         .unwrap_or(true) &&
-    name.as_ref().map(|n| {
-        ignorecase && equals_ignorecase(n, &np.name) || n == &np.name
-    }).unwrap_or(true) &&
-    code.as_ref().map(|c| {
-        ignorecase && equals_ignorecase(c, &np.code) || c == &np.code
-    }).unwrap_or(true)
+    match (name, code) {
+        (None, None) => true,
+        (name, code) => {
+            let np = player.netplay.as_ref().expect("No Netplay data found");
+            name.as_ref().map(|n| {
+                ignorecase && equals_ignorecase(n, &np.name) || n == &np.name
+            }).unwrap_or(true) &&
+            code.as_ref().map(|c| {
+                ignorecase && equals_ignorecase(c, &np.code) || c == &np.code
+            }).unwrap_or(true)
+        }
+    }
 }
 
 fn equals_ignorecase(s1: &str, s2: &str) -> bool {
