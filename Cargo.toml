@@ -7,17 +7,14 @@ version = "0.2.0"
 license = "MIT"
 edition = "2021"
 
-[lib]
-name = "slp_search"
-path = "src/lib.rs"
-
 [[bin]]
-name = "slp_search"
-path = "src/bin.rs"
+name = "slp-search"
+path = "app/main.rs"
 
 [dependencies]
-#peppi = "1.0.0-alpha.6"
+slp-filter = { version = "0.1.0", path = "slp-filter" }
 lazy_static = { version = "1.4.0" }
 regex = { version = "1", default-features = false, features = ["perf", "std"] }
+#peppi = "1.0.0-alpha.6"
 peppi = { git = "https://github.com/hohav/peppi", branch="main" }
 clap = { version = "3.1.17", features = ["derive"] }

@@ -12,7 +12,7 @@ use peppi::model::{
 };
 use peppi::serde::de;
 
-use slp_search::MatchedPlayers;
+use slp_filter::MatchedPlayers;
 use args::{Cli, Commands, Filter, SharedArgs};
 use crate::regex::*;
 

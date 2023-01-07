@@ -653,6 +653,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f27f6278552951f1f2b8cf9da965d10969b2efdea95a6ec47987ab46edfe263a"
 
 [[package]]
+name = "slp-filter"
+version = "0.1.0"
+dependencies = [
+ "peppi",
+]
+
+[[package]]
 name = "slp-search"
 version = "0.2.0"
 dependencies = [
@@ -660,6 +667,7 @@ dependencies = [
  "lazy_static",
  "peppi",
  "regex",
+ "slp-filter",
 ]
 
 [[package]]
