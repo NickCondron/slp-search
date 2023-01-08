@@ -8,4 +8,5 @@ license = "MIT"
 edition = "2021"
 
 [dependencies]
+itertools = "0.10.5"
 peppi = { git = "https://github.com/hohav/peppi", branch="main" }

@@ -1,16 +1,16 @@
-use peppi::model::enums::{
-    character::External,
-    stage::Stage,
-    costume::*,
-};
+use peppi::model::enums::{character::External, costume::*, stage::Stage};
 
 pub trait Regex {
-    fn try_match(s: &str) -> Option<Self> where Self: Sized;
+    fn try_match(s: &str) -> Option<Self>
+    where
+        Self: Sized;
 }
 
 pub trait RegexWithType {
     type T;
-    fn try_match(t: &Self::T, s: &str,) -> Option<Self> where Self: Sized;
+    fn try_match(t: &Self::T, s: &str) -> Option<Self>
+    where
+        Self: Sized;
 }
 
 macro_rules! regex_match_with {
